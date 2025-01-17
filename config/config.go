@@ -25,7 +25,7 @@ type Config struct {
 func ViperConfig() (*Config, error) {
 	viper.SetConfigName("db")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("/home/dmitriy/GolandProjects/WebTasks/cmd/WebTasks/config/")
+	viper.AddConfigPath("cmd/WebTasks/config/")
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("Error reading config file, %s", err)
 	}
