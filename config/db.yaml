@@ -1,6 +1,6 @@
 db:
-  host: "db"           # Хост базы данных (имя сервиса в Docker Compose)
-  port: 5432           # Порт базы данных
+  host: "localhost"           # Хост базы данных (имя сервиса в Docker Compose)
+  port: "5432"           # Порт базы данных
   user: "postgres"     # Имя пользователя базы данных
   password: "root"     # Пароль для базы данных
   dbname: "postgres"   # Имя базы данных
