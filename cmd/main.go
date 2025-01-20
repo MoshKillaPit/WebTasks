@@ -28,6 +28,10 @@ func main() {
 	taskService := services.NewTaskService(taskRepo)
 
 	router := mux.NewRouter()
+	userRepo := repositories.NewUserRepo(database)
+	userService := services.NewUserService(userRepo)
+	handlers.RegisterUserRoutes(router, userService)
+
 	handlers.RegisterTaskRoutes(router, taskService)
 
 	log.Println("Server is running on http://localhost:8080")

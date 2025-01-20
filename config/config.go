@@ -8,7 +8,7 @@ import (
 type Config struct {
 	DB struct {
 		Host       string `yaml:"host" validate:"required"`        // Хост базы данных
-		Port       string `yaml:"port" validate:"required"`        // Порт базы данных
+		Port       int    `yaml:"port" validate:"required"`        // Порт базы данных
 		User       string `yaml:"user" validate:"required"`        // Имя пользователя
 		Password   string `yaml:"password" validate:"required"`    // Пароль
 		DBName     string `yaml:"dbname" validate:"required"`      // Имя базы данных
