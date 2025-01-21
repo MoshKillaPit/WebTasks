@@ -25,13 +25,14 @@ func NewTaskService(repo repositories.TaskRepository) TaskService {
 }
 
 func (s *taskServiceImpl) Create(ctx context.Context, task models.Task) (models.Task, error) {
-
 	if task.Name == "" {
 		return models.Task{}, errors.New("task name is required")
 	}
+
 	if len(task.Name) > 50 {
 		return models.Task{}, errors.New("task name is too long")
 	}
+
 	if !task.Due.IsZero() && task.Due.Before(time.Now()) {
 		return models.Task{}, errors.New("due date cannot be in the past")
 	}
@@ -49,7 +50,7 @@ func (s *taskServiceImpl) GetAll(ctx context.Context) ([]models.Task, error) {
 }
 
 func (s *taskServiceImpl) GetByID(ctx context.Context, id int) (*models.Task, error) {
-	return s.repo.GetById(ctx, id)
+	return s.repo.GetByID(ctx, id)
 }
 
 func (s *taskServiceImpl) Delete(ctx context.Context, id int) error {
@@ -57,7 +58,7 @@ func (s *taskServiceImpl) Delete(ctx context.Context, id int) error {
 }
 
 func (s *taskServiceImpl) Update(ctx context.Context, task models.Task) (models.Task, error) {
-	existingTask, err := s.repo.GetById(ctx, task.ID)
+	existingTask, err := s.repo.GetByID(ctx, task.ID)
 	if err != nil {
 		return models.Task{}, err
 	}
@@ -65,9 +66,11 @@ func (s *taskServiceImpl) Update(ctx context.Context, task models.Task) (models.
 	if task.Name == "" {
 		return models.Task{}, errors.New("task name is required")
 	}
+
 	if len(task.Name) > 50 {
 		return models.Task{}, errors.New("task name must not exceed 50 characters")
 	}
+
 	if !task.Due.IsZero() && task.Due.Before(time.Now()) {
 		return models.Task{}, errors.New("due date cannot be in the past")
 	}
@@ -75,9 +78,11 @@ func (s *taskServiceImpl) Update(ctx context.Context, task models.Task) (models.
 	if task.Status == "" {
 		task.Status = existingTask.Status
 	}
+
 	if task.Time.IsZero() {
 		task.Time = existingTask.Time
 	}
+
 	if task.Due.IsZero() {
 		task.Due = existingTask.Due
 	}

@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/spf13/viper"
 	"log"
+
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -26,12 +27,18 @@ func ViperConfig() (*Config, error) {
 	viper.SetConfigName("db")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./config")
-	if err := viper.ReadInConfig(); err != nil {
+
+	err := viper.ReadInConfig()
+	if err != nil {
 		log.Fatalf("Error reading config file, %s", err)
 	}
+
 	var dbConfig Config
-	if err := viper.Unmarshal(&dbConfig); err != nil {
+
+	err = viper.Unmarshal(&dbConfig)
+	if err != nil {
 		log.Fatalf("unable to decode config, %v", err)
 	}
+
 	return &dbConfig, nil
 }

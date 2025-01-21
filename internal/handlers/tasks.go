@@ -10,12 +10,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Handler - структура обработчика для работы с задачами
 type Handler struct {
 	service services.TaskService
 }
 
-// NewHandler создает новый обработчик для задач
 func NewHandler(service services.TaskService) *Handler {
 	return &Handler{service: service}
 }
@@ -36,6 +34,7 @@ func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
 		return
 	}
+
 	h.writeJSON(w, http.StatusOK, tasks)
 }
 
@@ -53,6 +52,7 @@ func (h *Handler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
+
 	h.writeJSON(w, http.StatusOK, task)
 }
 
@@ -70,6 +70,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	h.writeJSON(w, http.StatusCreated, createdTask)
 }
 
@@ -87,6 +88,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
 	task.ID = id
 
 	updatedTask, err := h.service.Update(ctx, task)
@@ -94,6 +96,7 @@ func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	h.writeJSON(w, http.StatusOK, updatedTask)
 }
 
@@ -111,6 +114,7 @@ func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -122,5 +126,8 @@ func (h *Handler) parseID(r *http.Request) (int, error) {
 func (h *Handler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		http.Error(w, "Failed to encode response to JSON", http.StatusInternalServerError)
+	}
 }

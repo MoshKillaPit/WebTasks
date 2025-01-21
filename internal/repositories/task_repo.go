@@ -3,13 +3,15 @@ package repositories
 import (
 	"WebTasks/internal/models"
 	"context"
-	"github.com/jmoiron/sqlx"
+	"errors"
 	"log"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type TaskRepository interface {
 	Create(ctx context.Context, task *models.Task) (*models.Task, error)
-	GetById(ctx context.Context, id int) (*models.Task, error)
+	GetByID(ctx context.Context, id int) (*models.Task, error)
 	GetAll(ctx context.Context) ([]models.Task, error)
 	Update(ctx context.Context, task *models.Task) (*models.Task, error)
 	Delete(ctx context.Context, id int) error
@@ -29,38 +31,51 @@ func (r *TaskRepo) Create(ctx context.Context, task *models.Task) (*models.Task,
 		log.Printf("Error executing CreateTaskQuery: %v", err)
 		return nil, err
 	}
-	defer rows.Close()
 
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			log.Printf("Error closing rows in Create: %v", closeErr)
+		}
+	}()
+
+	var createdTask models.Task
 	if rows.Next() {
-		var createdTask models.Task
 		if err := rows.StructScan(&createdTask); err != nil {
 			log.Printf("Error scanning created task: %v", err)
 			return nil, err
 		}
+
 		return &createdTask, nil
 	}
 
 	log.Printf("Task creation failed, no rows returned")
-	return nil, nil
+
+	// Пустая строка перед return
+	return nil, errors.New("task creation failed: no rows returned")
 }
 
-func (r *TaskRepo) GetById(ctx context.Context, id int) (*models.Task, error) {
+func (r *TaskRepo) GetByID(ctx context.Context, id int) (*models.Task, error) {
 	var task models.Task
+
 	err := r.db.GetContext(ctx, &task, GetTaskByIDQuery, id)
 	if err != nil {
 		log.Printf("Error executing GetTaskByIDQuery for id %d: %v", id, err)
 		return nil, err
 	}
+
 	return &task, nil
 }
 
 func (r *TaskRepo) GetAll(ctx context.Context) ([]models.Task, error) {
 	var tasks []models.Task
+
 	err := r.db.SelectContext(ctx, &tasks, GetAllTasksQuery)
 	if err != nil {
 		log.Printf("Error executing GetAllTasksQuery: %v", err)
 		return nil, err
 	}
+
 	return tasks, nil
 }
 
@@ -70,19 +85,28 @@ func (r *TaskRepo) Update(ctx context.Context, task *models.Task) (*models.Task,
 		log.Printf("Error executing UpdateTaskQuery: %v", err)
 		return nil, err
 	}
-	defer rows.Close()
 
+	defer func() {
+		closeErr := rows.Close()
+		if closeErr != nil {
+			log.Printf("Error closing rows in Update: %v", closeErr)
+		}
+	}()
+
+	var updatedTask models.Task
 	if rows.Next() {
-		var updatedTask models.Task
 		if err := rows.StructScan(&updatedTask); err != nil {
 			log.Printf("Error scanning updated task: %v", err)
 			return nil, err
 		}
+
 		return &updatedTask, nil
 	}
 
 	log.Printf("Task update failed, no rows returned")
-	return nil, nil
+
+	// Пустая строка перед return
+	return nil, errors.New("task update failed: no rows returned")
 }
 
 func (r *TaskRepo) Delete(ctx context.Context, id int) error {
@@ -91,5 +115,6 @@ func (r *TaskRepo) Delete(ctx context.Context, id int) error {
 		log.Printf("Error executing DeleteTaskQuery for id %d: %v", id, err)
 		return err
 	}
+
 	return nil
 }

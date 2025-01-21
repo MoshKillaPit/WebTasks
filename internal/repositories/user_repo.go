@@ -4,14 +4,15 @@ import (
 	"WebTasks/internal/models"
 	"context"
 	"errors"
-	"github.com/jmoiron/sqlx"
 	"log"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type UserRepository interface {
 	Create(ctx context.Context, user *models.User) (*models.User, error)
 	GetAll(ctx context.Context) ([]models.User, error)
-	GetById(ctx context.Context, id int) (*models.User, error)
+	GetByID(ctx context.Context, id int) (*models.User, error)
 	Update(ctx context.Context, user *models.User) (*models.User, error)
 	Delete(ctx context.Context, id int) error
 }
@@ -30,7 +31,13 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) (*models.User,
 		logError("CreateUserQuery", err)
 		return nil, err
 	}
-	defer rows.Close()
+
+	// Отложенный вызов с проверкой возможной ошибки закрытия
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			logError("Close rows in Create", closeErr)
+		}
+	}()
 
 	if rows.Next() {
 		var createdUser models.User
@@ -38,30 +45,36 @@ func (r *UserRepo) Create(ctx context.Context, user *models.User) (*models.User,
 			logError("StructScan (Create)", err)
 			return nil, err
 		}
+
 		return &createdUser, nil
 	}
 
 	log.Printf("User creation failed: no rows returned")
+
 	return nil, errors.New("user creation failed")
 }
 
 func (r *UserRepo) GetAll(ctx context.Context) ([]models.User, error) {
 	var users []models.User
+
 	err := r.db.SelectContext(ctx, &users, GetAllUsersQuery)
 	if err != nil {
 		logError("GetAllUsersQuery", err)
 		return nil, err
 	}
+
 	return users, nil
 }
 
-func (r *UserRepo) GetById(ctx context.Context, id int) (*models.User, error) {
+func (r *UserRepo) GetByID(ctx context.Context, id int) (*models.User, error) {
 	var user models.User
+
 	err := r.db.GetContext(ctx, &user, GetUserByIDQuery, id)
 	if err != nil {
 		logError("GetUserByIDQuery", err)
 		return nil, err
 	}
+
 	return &user, nil
 }
 
@@ -71,7 +84,12 @@ func (r *UserRepo) Update(ctx context.Context, user *models.User) (*models.User,
 		logError("UpdateUserQuery", err)
 		return nil, err
 	}
-	defer rows.Close()
+
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			logError("Close rows in Update", closeErr)
+		}
+	}()
 
 	if rows.Next() {
 		var updatedUser models.User
@@ -79,10 +97,12 @@ func (r *UserRepo) Update(ctx context.Context, user *models.User) (*models.User,
 			logError("StructScan (Update)", err)
 			return nil, err
 		}
+
 		return &updatedUser, nil
 	}
 
 	log.Printf("User update failed: no rows returned")
+
 	return nil, errors.New("user update failed")
 }
 
@@ -92,6 +112,7 @@ func (r *UserRepo) Delete(ctx context.Context, id int) error {
 		logError("DeleteUserQuery", err)
 		return err
 	}
+
 	return nil
 }
 

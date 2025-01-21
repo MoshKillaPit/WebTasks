@@ -6,26 +6,34 @@ import (
 	"WebTasks/internal/handlers"
 	"WebTasks/internal/repositories"
 	"WebTasks/internal/services"
-	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	// Чтение конфигурации
 	cfg, err := config.ViperConfig()
 	if err != nil {
-		log.Fatalf("Ошибка чтения конфигурации базы данных: %v", err)
+		log.Printf("Ошибка чтения конфигурации базы данных: %v", err)
+		return
 	}
 
 	// Подключение к базе данных
 	database, err := db.DB(cfg)
 	if err != nil {
-		log.Fatalf("Ошибка подключения к базе данных: %v", err)
+		log.Printf("Ошибка подключения к базе данных: %v", err)
+		return
 	}
-	defer database.Close()
+
+	defer func() {
+		if err := database.Close(); err != nil {
+			log.Printf("Ошибка при закрытии подключения к базе данных: %v", err)
+		}
+	}()
 
 	// Создание репозиториев
 	userRepo := repositories.NewUserRepo(database)
@@ -44,6 +52,7 @@ func main() {
 
 	// Применение глобальных middleware
 	router.Use(handlers.LoggerMiddleware) // Логирование запросов
+	router.Use(handlers.AuthMiddleware)
 
 	// Регистрация маршрутов
 	handlers.RegisterUserRoutes(router, userHandler)
@@ -52,16 +61,10 @@ func main() {
 	// Запуск сервера
 	serverAddress := cfg.Server.IP + ":" + strconv.Itoa(cfg.Server.Port)
 	log.Printf("Сервер запущен на %s", serverAddress)
-	log.Fatal(http.ListenAndServe(serverAddress, router))
-}
 
-/*
-	прим миграций
-				if err := db.ApplyMigrations(database); err != nil {
-			        log.Fatalf("Ошибка применения миграций: %v", err)
-			    }
-		откат миграций
-	if err := db.RollbackMigrations(database); err != nil {
-	    log.Fatalf("Ошибка отката миграций: %v", err)
+	err = http.ListenAndServe(serverAddress, router)
+	if err != nil {
+		log.Printf("Ошибка запуска сервера: %v", err)
+		return
 	}
-*/
+}

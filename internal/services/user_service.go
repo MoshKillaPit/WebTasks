@@ -24,13 +24,11 @@ func NewUserService(repo repositories.UserRepository) UserService {
 }
 
 func (s *userServiceImpl) Create(ctx context.Context, user models.User) (models.User, error) {
-
 	if user.Name == "" || user.Key == "" {
 		return models.User{}, errors.New("name and key are required")
 	}
 
 	createdUser, err := s.repo.Create(ctx, &user)
-
 	if err != nil {
 		return models.User{}, err
 	}
@@ -43,10 +41,11 @@ func (s *userServiceImpl) GetAll(ctx context.Context) ([]models.User, error) {
 }
 
 func (s *userServiceImpl) GetByID(ctx context.Context, id int) (models.User, error) {
-	user, err := s.repo.GetById(ctx, id)
+	user, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return models.User{}, err
 	}
+
 	return *user, nil
 }
 

@@ -1,8 +1,9 @@
 package db
 
 import (
-	"github.com/jmoiron/sqlx"
 	"log"
+
+	"github.com/jmoiron/sqlx"
 )
 
 func ApplyMigrations(db *sqlx.DB) error {
@@ -28,13 +29,17 @@ func ApplyMigrations(db *sqlx.DB) error {
 	// Выполнение миграций
 	for _, query := range queries {
 		log.Printf("Выполнение миграции: %s", query)
-		if _, err := db.Exec(query); err != nil {
+
+		_, err := db.Exec(query)
+		if err != nil {
 			log.Printf("Ошибка выполнения миграции: %v", err)
+
 			return err
 		}
 	}
 
 	log.Println("Миграции успешно применены!")
+
 	return nil
 }
 
@@ -46,12 +51,16 @@ func RollbackMigrations(db *sqlx.DB) error {
 
 	for _, query := range queries {
 		log.Printf("Откат миграции: %s", query)
-		if _, err := db.Exec(query); err != nil {
+
+		_, err := db.Exec(query)
+		if err != nil {
 			log.Printf("Ошибка отката миграции: %v", err)
+
 			return err
 		}
 	}
 
 	log.Println("Откат миграций успешно выполнен!")
+
 	return nil
 }
