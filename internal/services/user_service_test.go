@@ -24,7 +24,8 @@ func (m *MockUserRepository) GetAll(ctx context.Context) ([]models.User, error) 
 	return args.Get(0).([]models.User), args.Error(1)
 }
 
-func (m *MockUserRepository) GetById(ctx context.Context, id int) (*models.User, error) {
+// Исправлено: GetByID вместо GetById
+func (m *MockUserRepository) GetByID(ctx context.Context, id int) (*models.User, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -59,7 +60,6 @@ func TestUserService_Create(t *testing.T) {
 	mockRepo.On("Create", ctx, &validUser).Return(&validUser, nil)
 
 	result, err := service.Create(ctx, validUser)
-
 	require.NoError(t, err)
 	require.Equal(t, validUser, result)
 	mockRepo.AssertExpectations(t)
@@ -83,16 +83,15 @@ func TestUserService_GetByID(t *testing.T) {
 	}
 
 	// Успешное получение пользователя
-	mockRepo.On("GetById", ctx, validUser.ID).Return(&validUser, nil)
+	mockRepo.On("GetByID", ctx, validUser.ID).Return(&validUser, nil)
 
 	result, err := service.GetByID(ctx, validUser.ID)
-
 	require.NoError(t, err)
 	require.Equal(t, validUser, result)
 	mockRepo.AssertExpectations(t)
 
 	// Ошибка: пользователь не найден
-	mockRepo.On("GetById", ctx, 999).Return(nil, errors.New("user not found"))
+	mockRepo.On("GetByID", ctx, 999).Return(nil, errors.New("user not found"))
 
 	_, err = service.GetByID(ctx, 999)
 	require.Error(t, err)
@@ -115,7 +114,6 @@ func TestUserService_Update(t *testing.T) {
 	mockRepo.On("Update", ctx, &updatedUser).Return(&updatedUser, nil)
 
 	result, err := service.Update(ctx, updatedUser)
-
 	require.NoError(t, err)
 	require.Equal(t, updatedUser, result)
 	mockRepo.AssertExpectations(t)
@@ -142,7 +140,6 @@ func TestUserService_Delete(t *testing.T) {
 	mockRepo.On("Delete", ctx, validUserID).Return(nil)
 
 	err := service.Delete(ctx, validUserID)
-
 	require.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 

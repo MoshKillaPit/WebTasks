@@ -82,7 +82,7 @@ func TestUserRepo_GetById(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "key"}).AddRow(1, "User1", "key1"))
 
 	ctx := context.Background()
-	user, err := repo.GetById(ctx, 1)
+	user, err := repo.GetByID(ctx, 1)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, user)

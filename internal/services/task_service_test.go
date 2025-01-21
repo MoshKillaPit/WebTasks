@@ -23,7 +23,8 @@ func (m *MockTaskRepository) Create(ctx context.Context, task *models.Task) (*mo
 	return nil, args.Error(1)
 }
 
-func (m *MockTaskRepository) GetById(ctx context.Context, id int) (*models.Task, error) {
+// Исправлено: GetByID вместо GetById
+func (m *MockTaskRepository) GetByID(ctx context.Context, id int) (*models.Task, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) != nil {
 		return args.Get(0).(*models.Task), args.Error(1)
@@ -72,7 +73,6 @@ func TestTaskService_Create(t *testing.T) {
 	mockRepo.On("Create", ctx, &validTask).Return(&validTask, nil)
 
 	result, err := service.Create(ctx, validTask)
-
 	require.NoError(t, err)
 	require.Equal(t, validTask, result)
 	mockRepo.AssertExpectations(t)
@@ -114,16 +114,15 @@ func TestTaskService_GetByID(t *testing.T) {
 	}
 
 	// Успешный вызов
-	mockRepo.On("GetById", ctx, task.ID).Return(&task, nil)
+	mockRepo.On("GetByID", ctx, task.ID).Return(&task, nil)
 
 	result, err := service.GetByID(ctx, task.ID)
-
 	require.NoError(t, err)
 	require.Equal(t, &task, result)
 	mockRepo.AssertExpectations(t)
 
 	// Ошибка: задача не найдена
-	mockRepo.On("GetById", ctx, 999).Return(nil, errors.New("task not found"))
+	mockRepo.On("GetByID", ctx, 999).Return(nil, errors.New("task not found"))
 
 	_, err = service.GetByID(ctx, 999)
 	require.Error(t, err)
@@ -146,7 +145,6 @@ func TestTaskService_GetAll(t *testing.T) {
 	mockRepo.On("GetAll", ctx).Return(tasks, nil)
 
 	result, err := service.GetAll(ctx)
-
 	require.NoError(t, err)
 	require.Equal(t, tasks, result)
 	mockRepo.AssertExpectations(t)
@@ -182,7 +180,7 @@ func TestTaskService_Update(t *testing.T) {
 	}
 
 	// Успешное обновление
-	mockRepo.On("GetById", ctx, existingTask.ID).Return(&existingTask, nil)
+	mockRepo.On("GetByID", ctx, existingTask.ID).Return(&existingTask, nil)
 	mockRepo.On("Update", ctx, mock.MatchedBy(func(task *models.Task) bool {
 		return task.ID == updatedTask.ID && task.Name == updatedTask.Name &&
 			task.Status == updatedTask.Status && task.Time.Equal(updatedTask.Time) &&
@@ -190,13 +188,12 @@ func TestTaskService_Update(t *testing.T) {
 	})).Return(&updatedTask, nil)
 
 	result, err := service.Update(ctx, updatedTask)
-
 	require.NoError(t, err)
 	require.Equal(t, updatedTask, result)
 	mockRepo.AssertExpectations(t)
 
 	// Ошибка: задача не найдена
-	mockRepo.On("GetById", ctx, 999).Return(nil, errors.New("task not found"))
+	mockRepo.On("GetByID", ctx, 999).Return(nil, errors.New("task not found"))
 
 	_, err = service.Update(ctx, models.Task{ID: 999})
 	require.Error(t, err)
@@ -228,7 +225,7 @@ func TestTaskService_Update(t *testing.T) {
 		ID:   1,
 		Name: "Partial Update",
 	}
-	mockRepo.On("GetById", ctx, existingTask.ID).Return(&existingTask, nil)
+	mockRepo.On("GetByID", ctx, existingTask.ID).Return(&existingTask, nil)
 	mockRepo.On("Update", ctx, mock.MatchedBy(func(task *models.Task) bool {
 		return task.ID == partialUpdateTask.ID && task.Name == partialUpdateTask.Name &&
 			task.Status == existingTask.Status && task.Time.Equal(existingTask.Time) &&
@@ -236,7 +233,6 @@ func TestTaskService_Update(t *testing.T) {
 	})).Return(&partialUpdateTask, nil)
 
 	result, err = service.Update(ctx, partialUpdateTask)
-
 	require.NoError(t, err)
 	require.Equal(t, partialUpdateTask.ID, result.ID)
 	require.Equal(t, partialUpdateTask.Name, result.Name)
@@ -258,7 +254,6 @@ func TestTaskService_Delete(t *testing.T) {
 	mockRepo.On("Delete", ctx, taskID).Return(nil)
 
 	err := service.Delete(ctx, taskID)
-
 	require.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 

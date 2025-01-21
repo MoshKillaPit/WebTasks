@@ -87,7 +87,7 @@ func TestTaskRepo_GetById(t *testing.T) {
 			AddRow(1, "Task 1", "Pending", time.Now(), time.Now().Add(24*time.Hour)))
 
 	ctx := context.Background()
-	task, err := repo.GetById(ctx, 1)
+	task, err := repo.GetByID(ctx, 1)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, task)
