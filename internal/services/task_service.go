@@ -3,17 +3,17 @@ package services
 import (
 	"WebTasks/internal/models"
 	"WebTasks/internal/repositories"
-	"database/sql"
+	"context"
 	"errors"
 	"time"
 )
 
 type TaskService interface {
-	Create(task models.Task) (models.Task, error)
-	GetByID(id int) (*models.Task, error) // Меняем models.Task на *models.Task
-	GetAll() ([]models.Task, error)
-	Update(task models.Task) (models.Task, error)
-	Delete(id int) error
+	Create(ctx context.Context, task models.Task) (models.Task, error)
+	GetByID(ctx context.Context, id int) (*models.Task, error)
+	GetAll(ctx context.Context) ([]models.Task, error)
+	Update(ctx context.Context, task models.Task) (models.Task, error)
+	Delete(ctx context.Context, id int) error
 }
 
 type TaskServiceImpl struct {
@@ -24,7 +24,7 @@ func NewTaskService(repo repositories.TaskRepository) *TaskServiceImpl {
 	return &TaskServiceImpl{repo: repo}
 }
 
-func (s *TaskServiceImpl) Create(task models.Task) (models.Task, error) {
+func (s *TaskServiceImpl) Create(ctx context.Context, task models.Task) (models.Task, error) {
 	if task.Name == "" {
 		return models.Task{}, errors.New("task name is required")
 	}
@@ -35,32 +35,29 @@ func (s *TaskServiceImpl) Create(task models.Task) (models.Task, error) {
 		return models.Task{}, errors.New("due date cannot be in the past")
 	}
 
-	createdTask, err := s.repo.Create(&task)
+	createdTask, err := s.repo.Create(ctx, &task)
 	if err != nil {
 		return models.Task{}, err
 	}
 
-	return *createdTask, nil // Разыменовываем указатель для возврата значения
+	return *createdTask, nil
 }
 
-func (s *TaskServiceImpl) GetAll() ([]models.Task, error) {
-	return s.repo.GetAll()
+func (s *TaskServiceImpl) GetAll(ctx context.Context) ([]models.Task, error) {
+	return s.repo.GetAll(ctx)
 }
 
-func (s *TaskServiceImpl) GetByID(id int) (*models.Task, error) {
-	return s.repo.GetById(id)
+func (s *TaskServiceImpl) GetByID(ctx context.Context, id int) (*models.Task, error) {
+	return s.repo.GetById(ctx, id)
 }
 
-func (s *TaskServiceImpl) Delete(id int) error {
-	return s.repo.Delete(id)
+func (s *TaskServiceImpl) Delete(ctx context.Context, id int) error {
+	return s.repo.Delete(ctx, id)
 }
 
-func (s *TaskServiceImpl) Update(task models.Task) (models.Task, error) {
-	existingTask, err := s.repo.GetById(task.ID)
+func (s *TaskServiceImpl) Update(ctx context.Context, task models.Task) (models.Task, error) {
+	existingTask, err := s.repo.GetById(ctx, task.ID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return models.Task{}, errors.New("task not found")
-		}
 		return models.Task{}, err
 	}
 
@@ -86,11 +83,10 @@ func (s *TaskServiceImpl) Update(task models.Task) (models.Task, error) {
 		task.Due = existingTask.Due
 	}
 
-	updatedTask, err := s.repo.Update(&task)
+	updatedTask, err := s.repo.Update(ctx, &task)
 	if err != nil {
 		return models.Task{}, err
 	}
 
-	// Разыменование указателя для возврата
 	return *updatedTask, nil
 }

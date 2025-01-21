@@ -3,12 +3,15 @@ package services
 import (
 	"WebTasks/internal/models"
 	"WebTasks/internal/repositories"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 type UserService interface {
 	Create(user models.User) (models.User, error)
 	GetAll() ([]models.User, error)
+	GetByID(id int) (models.User, error)
+	Update(user models.User) (models.User, error)
+	Delete(id int) error
 }
 
 type UserServiceImpl struct {
@@ -28,4 +31,16 @@ func (s *UserServiceImpl) Create(user models.User) (models.User, error) {
 
 func (s *UserServiceImpl) GetAll() ([]models.User, error) {
 	return s.repo.GetAll()
+}
+
+func (s *UserServiceImpl) GetByID(id int) (models.User, error) {
+	return s.repo.GetById(id)
+}
+
+func (s *UserServiceImpl) Update(user models.User) (models.User, error) {
+	return s.repo.Update(user)
+}
+
+func (s *UserServiceImpl) Delete(id int) error {
+	return s.repo.Delete(id)
 }

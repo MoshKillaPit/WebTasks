@@ -3,11 +3,15 @@ package repositories
 import (
 	"WebTasks/internal/models"
 	"github.com/jmoiron/sqlx"
+	"log"
 )
 
 type UserRepository interface {
 	Create(user models.User) (models.User, error)
 	GetAll() ([]models.User, error)
+	GetById(id int) (models.User, error)
+	Update(user models.User) (models.User, error)
+	Delete(id int) error
 }
 
 type UserRepo struct {
@@ -19,20 +23,18 @@ func NewUserRepo(db *sqlx.DB) *UserRepo {
 }
 
 func (r *UserRepo) Create(user models.User) (models.User, error) {
-	query := `
-		INSERT INTO users (name, key)
-		VALUES (:name, :key)
-		RETURNING id, name, key;
-	`
-	rows, err := r.db.NamedQuery(query, user)
+	rows, err := r.db.NamedQuery(CreateUserQuery, user)
 	if err != nil {
+		log.Printf("Error executing CreateUserQuery: %v", err)
 		return models.User{}, err
 	}
 	defer rows.Close()
 
 	if rows.Next() {
 		var createdUser models.User
-		if err := rows.StructScan(&createdUser); err != nil {
+		err := rows.StructScan(&createdUser)
+		if err != nil {
+			log.Printf("Error scanning created user: %v", err)
 			return models.User{}, err
 		}
 		return createdUser, nil
@@ -41,10 +43,49 @@ func (r *UserRepo) Create(user models.User) (models.User, error) {
 }
 
 func (r *UserRepo) GetAll() ([]models.User, error) {
-	query := "SELECT id, name, key FROM users;"
 	var users []models.User
-	if err := r.db.Select(&users, query); err != nil {
+	err := r.db.Select(&users, GetAllUsersQuery)
+	if err != nil {
+		log.Printf("Error executing GetAllUsersQuery: %v", err)
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *UserRepo) GetById(id int) (models.User, error) {
+	var user models.User
+	err := r.db.Get(&user, GetUserByIDQuery, id)
+	if err != nil {
+		log.Printf("Error executing GetUserByIDQuery: %v", err)
+		return models.User{}, err
+	}
+	return user, nil
+}
+
+func (r *UserRepo) Update(user models.User) (models.User, error) {
+	rows, err := r.db.NamedQuery(UpdateUserQuery, user)
+	if err != nil {
+		log.Printf("Error executing UpdateUserQuery: %v", err)
+		return models.User{}, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var updatedUser models.User
+		err := rows.StructScan(&updatedUser)
+		if err != nil {
+			log.Printf("Error scanning updated user: %v", err)
+			return models.User{}, err
+		}
+		return updatedUser, nil
+	}
+	return models.User{}, nil
+}
+
+func (r *UserRepo) Delete(id int) error {
+	_, err := r.db.Exec(DeleteUserQuery, id)
+	if err != nil {
+		log.Printf("Error executing DeleteUserQuery: %v", err)
+	}
+	return err
 }

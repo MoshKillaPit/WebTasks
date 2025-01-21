@@ -10,41 +10,55 @@ import (
 	_ "github.com/lib/pq"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func main() {
-	// Инициализация данных о бд
-	config, err := config.ViperConfig()
+	// Чтение конфигурации
+	cfg, err := config.ViperConfig()
 	if err != nil {
-		log.Fatal("Ошибка чтения файла данных бд", err)
+		log.Fatalf("Ошибка чтения конфигурации базы данных: %v", err)
 	}
-	database, err := db.DB(config)
+
+	// Подключение к базе данных
+	database, err := db.DB(cfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Ошибка подключения к базе данных: %v", err)
 	}
 	defer database.Close()
 
+	// Создание репозиториев
+	userRepo := repositories.NewUserRepo(database)
 	taskRepo := repositories.RepositoryForTasks(database)
+
+	// Создание сервисов
+	userService := services.NewUserService(userRepo)
 	taskService := services.NewTaskService(taskRepo)
 
+	// Создание маршрутов
 	router := mux.NewRouter()
-	userRepo := repositories.NewUserRepo(database)
-	userService := services.NewUserService(userRepo)
-	handlers.RegisterUserRoutes(router, userService)
 
+	// Применение глобальных middleware
+	router.Use(handlers.LoggerMiddleware)      // Логирование запросов
+	router.Use(handlers.CORSHeadersMiddleware) // Добавление CORS-заголовков
+
+	// Регистрация маршрутов
+	handlers.RegisterUserRoutes(router, userService)
 	handlers.RegisterTaskRoutes(router, taskService)
 
-	log.Println("Server is running on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
-
-	/*
-		прим миграций
-					if err := db.ApplyMigrations(database); err != nil {
-				        log.Fatalf("Ошибка применения миграций: %v", err)
-				    }
-			откат миграций
-		if err := db.RollbackMigrations(database); err != nil {
-		    log.Fatalf("Ошибка отката миграций: %v", err)
-		}
-	*/
+	// Запуск сервера
+	serverAddress := cfg.Server.IP + ":" + strconv.Itoa(cfg.Server.Port)
+	log.Printf("Сервер запущен на %s", serverAddress)
+	log.Fatal(http.ListenAndServe(serverAddress, router))
 }
+
+/*
+	прим миграций
+				if err := db.ApplyMigrations(database); err != nil {
+			        log.Fatalf("Ошибка применения миграций: %v", err)
+			    }
+		откат миграций
+	if err := db.RollbackMigrations(database); err != nil {
+	    log.Fatalf("Ошибка отката миграций: %v", err)
+	}
+*/

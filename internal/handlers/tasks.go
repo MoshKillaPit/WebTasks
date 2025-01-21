@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func RegisterTaskRoutes(router *mux.Router, service *services.TaskServiceImpl) {
+func RegisterTaskRoutes(router *mux.Router, service services.TaskService) {
 	router.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		GetTasks(w, r, service)
 	}).Methods("GET")
@@ -33,7 +33,10 @@ func RegisterTaskRoutes(router *mux.Router, service *services.TaskServiceImpl) {
 }
 
 func GetTasks(w http.ResponseWriter, r *http.Request, service services.TaskService) {
-	tasks, err := service.GetAll()
+	// Извлечение контекста из HTTP-запроса
+	ctx := r.Context()
+
+	tasks, err := service.GetAll(ctx)
 	if err != nil {
 		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
 		return
@@ -42,9 +45,16 @@ func GetTasks(w http.ResponseWriter, r *http.Request, service services.TaskServi
 }
 
 func CreateTask(w http.ResponseWriter, r *http.Request, service services.TaskService) {
+	// Извлечение контекста из HTTP-запроса
+	ctx := r.Context()
+
 	var task models.Task
-	_ = json.NewDecoder(r.Body).Decode(&task)
-	createdTask, err := service.Create(task)
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	createdTask, err := service.Create(ctx, task)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -53,11 +63,23 @@ func CreateTask(w http.ResponseWriter, r *http.Request, service services.TaskSer
 }
 
 func UpdateTask(w http.ResponseWriter, r *http.Request, service services.TaskService) {
-	id, _ := strconv.Atoi(mux.Vars(r)["id"])
+	// Извлечение контекста из HTTP-запроса
+	ctx := r.Context()
+
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
+	}
+
 	var task models.Task
-	_ = json.NewDecoder(r.Body).Decode(&task)
+	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
 	task.ID = id
-	updatedTask, err := service.Update(task)
+
+	updatedTask, err := service.Update(ctx, task)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -66,6 +88,9 @@ func UpdateTask(w http.ResponseWriter, r *http.Request, service services.TaskSer
 }
 
 func GetTaskByID(w http.ResponseWriter, r *http.Request, service services.TaskService) {
+	// Извлечение контекста из HTTP-запроса
+	ctx := r.Context()
+
 	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -73,7 +98,7 @@ func GetTaskByID(w http.ResponseWriter, r *http.Request, service services.TaskSe
 		return
 	}
 
-	task, err := service.GetByID(id)
+	task, err := service.GetByID(ctx, id)
 	if err != nil {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
@@ -84,6 +109,9 @@ func GetTaskByID(w http.ResponseWriter, r *http.Request, service services.TaskSe
 }
 
 func DeleteTask(w http.ResponseWriter, r *http.Request, service services.TaskService) {
+	// Извлечение контекста из HTTP-запроса
+	ctx := r.Context()
+
 	idStr := mux.Vars(r)["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -91,7 +119,7 @@ func DeleteTask(w http.ResponseWriter, r *http.Request, service services.TaskSer
 		return
 	}
 
-	err = service.Delete(id)
+	err = service.Delete(ctx, id)
 	if err != nil {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
