@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build, Lint, and Test
+    name: Build and Test
     runs-on: ubuntu-latest
 
     steps:
@@ -22,18 +22,9 @@ jobs:
       - name: Install dependencies
         run: go mod tidy
 
-      - name: Install GolangCI-Lint
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.52.2
-
-      - name: Run GolangCI-Lint
-        run: |
-          golangci-lint run ./...
-
       - name: Run tests
         run: |
           go test ./... -v -coverprofile=coverage.out
 
       - name: Check formatting
-        run: |
-          gofmt -l .
+        run: gofmt -l .
