@@ -19,23 +19,6 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// CORSHeadersMiddleware добавляет заголовки CORS для управления доступом
-func CORSHeadersMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		// Обработка preflight-запросов
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		next.ServeHTTP(w, r) // Передача управления следующему обработчику
-	})
-}
-
 // AuthMiddleware проверяет наличие заголовка Authorization
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

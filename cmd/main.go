@@ -35,16 +35,19 @@ func main() {
 	userService := services.NewUserService(userRepo)
 	taskService := services.NewTaskService(taskRepo)
 
+	// Создание обработчиков
+	taskHandler := handlers.NewHandler(taskService)
+	userHandler := handlers.NewUserHandler(userService)
+
 	// Создание маршрутов
 	router := mux.NewRouter()
 
 	// Применение глобальных middleware
-	router.Use(handlers.LoggerMiddleware)      // Логирование запросов
-	router.Use(handlers.CORSHeadersMiddleware) // Добавление CORS-заголовков
+	router.Use(handlers.LoggerMiddleware) // Логирование запросов
 
 	// Регистрация маршрутов
-	handlers.RegisterUserRoutes(router, userService)
-	handlers.RegisterTaskRoutes(router, taskService)
+	handlers.RegisterUserRoutes(router, userHandler)
+	handlers.RegisterTaskRoutes(router, taskHandler)
 
 	// Запуск сервера
 	serverAddress := cfg.Server.IP + ":" + strconv.Itoa(cfg.Server.Port)

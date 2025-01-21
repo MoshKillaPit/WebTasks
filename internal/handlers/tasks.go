@@ -10,42 +10,53 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func RegisterTaskRoutes(router *mux.Router, service services.TaskService) {
-	router.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
-		GetTasks(w, r, service)
-	}).Methods("GET")
-
-	router.HandleFunc("/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
-		GetTaskByID(w, r, service)
-	}).Methods("GET")
-
-	router.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
-		CreateTask(w, r, service)
-	}).Methods("POST")
-
-	router.HandleFunc("/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
-		UpdateTask(w, r, service)
-	}).Methods("PUT")
-
-	router.HandleFunc("/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
-		DeleteTask(w, r, service)
-	}).Methods("DELETE")
+// Handler - структура обработчика для работы с задачами
+type Handler struct {
+	service services.TaskService
 }
 
-func GetTasks(w http.ResponseWriter, r *http.Request, service services.TaskService) {
-	// Извлечение контекста из HTTP-запроса
+// NewHandler создает новый обработчик для задач
+func NewHandler(service services.TaskService) *Handler {
+	return &Handler{service: service}
+}
+
+func RegisterTaskRoutes(router *mux.Router, handler *Handler) {
+	router.HandleFunc("/tasks", handler.GetTasks).Methods(http.MethodGet)
+	router.HandleFunc("/tasks/{id}", handler.GetTaskByID).Methods(http.MethodGet)
+	router.HandleFunc("/tasks", handler.CreateTask).Methods(http.MethodPost)
+	router.HandleFunc("/tasks/{id}", handler.UpdateTask).Methods(http.MethodPut)
+	router.HandleFunc("/tasks/{id}", handler.DeleteTask).Methods(http.MethodDelete)
+}
+
+func (h *Handler) GetTasks(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	tasks, err := service.GetAll(ctx)
+	tasks, err := h.service.GetAll(ctx)
 	if err != nil {
 		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(tasks)
+	h.writeJSON(w, http.StatusOK, tasks)
 }
 
-func CreateTask(w http.ResponseWriter, r *http.Request, service services.TaskService) {
-	// Извлечение контекста из HTTP-запроса
+func (h *Handler) GetTaskByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	id, err := h.parseID(r)
+	if err != nil {
+		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		return
+	}
+
+	task, err := h.service.GetByID(ctx, id)
+	if err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+	h.writeJSON(w, http.StatusOK, task)
+}
+
+func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var task models.Task
@@ -54,19 +65,18 @@ func CreateTask(w http.ResponseWriter, r *http.Request, service services.TaskSer
 		return
 	}
 
-	createdTask, err := service.Create(ctx, task)
+	createdTask, err := h.service.Create(ctx, task)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	json.NewEncoder(w).Encode(createdTask)
+	h.writeJSON(w, http.StatusCreated, createdTask)
 }
 
-func UpdateTask(w http.ResponseWriter, r *http.Request, service services.TaskService) {
-	// Извлечение контекста из HTTP-запроса
+func (h *Handler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	id, err := h.parseID(r)
 	if err != nil {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
@@ -79,50 +89,38 @@ func UpdateTask(w http.ResponseWriter, r *http.Request, service services.TaskSer
 	}
 	task.ID = id
 
-	updatedTask, err := service.Update(ctx, task)
+	updatedTask, err := h.service.Update(ctx, task)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	json.NewEncoder(w).Encode(updatedTask)
+	h.writeJSON(w, http.StatusOK, updatedTask)
 }
 
-func GetTaskByID(w http.ResponseWriter, r *http.Request, service services.TaskService) {
-	// Извлечение контекста из HTTP-запроса
+func (h *Handler) DeleteTask(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	idStr := mux.Vars(r)["id"]
-	id, err := strconv.Atoi(idStr)
+	id, err := h.parseID(r)
 	if err != nil {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
-	task, err := service.GetByID(ctx, id)
-	if err != nil {
-		http.Error(w, "Task not found", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(task)
-}
-
-func DeleteTask(w http.ResponseWriter, r *http.Request, service services.TaskService) {
-	// Извлечение контекста из HTTP-запроса
-	ctx := r.Context()
-
-	idStr := mux.Vars(r)["id"]
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
-		return
-	}
-
-	err = service.Delete(ctx, id)
+	err = h.service.Delete(ctx, id)
 	if err != nil {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) parseID(r *http.Request) (int, error) {
+	idStr := mux.Vars(r)["id"]
+	return strconv.Atoi(idStr)
+}
+
+func (h *Handler) writeJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
 }

@@ -15,15 +15,15 @@ type TaskRepository interface {
 	Delete(ctx context.Context, id int) error
 }
 
-type Task struct {
+type TaskRepo struct {
 	db *sqlx.DB
 }
 
-func RepositoryForTasks(db *sqlx.DB) *Task {
-	return &Task{db: db}
+func RepositoryForTasks(db *sqlx.DB) TaskRepository {
+	return &TaskRepo{db: db}
 }
 
-func (r *Task) Create(ctx context.Context, task *models.Task) (*models.Task, error) {
+func (r *TaskRepo) Create(ctx context.Context, task *models.Task) (*models.Task, error) {
 	rows, err := r.db.NamedQueryContext(ctx, CreateTaskQuery, task)
 	if err != nil {
 		log.Printf("Error executing CreateTaskQuery: %v", err)
@@ -33,27 +33,28 @@ func (r *Task) Create(ctx context.Context, task *models.Task) (*models.Task, err
 
 	if rows.Next() {
 		var createdTask models.Task
-		err := rows.StructScan(&createdTask)
-		if err != nil {
+		if err := rows.StructScan(&createdTask); err != nil {
 			log.Printf("Error scanning created task: %v", err)
 			return nil, err
 		}
 		return &createdTask, nil
 	}
+
+	log.Printf("Task creation failed, no rows returned")
 	return nil, nil
 }
 
-func (r *Task) GetById(ctx context.Context, id int) (*models.Task, error) {
+func (r *TaskRepo) GetById(ctx context.Context, id int) (*models.Task, error) {
 	var task models.Task
 	err := r.db.GetContext(ctx, &task, GetTaskByIDQuery, id)
 	if err != nil {
-		log.Printf("Error executing GetTaskByIDQuery: %v", err)
+		log.Printf("Error executing GetTaskByIDQuery for id %d: %v", id, err)
 		return nil, err
 	}
 	return &task, nil
 }
 
-func (r *Task) GetAll(ctx context.Context) ([]models.Task, error) {
+func (r *TaskRepo) GetAll(ctx context.Context) ([]models.Task, error) {
 	var tasks []models.Task
 	err := r.db.SelectContext(ctx, &tasks, GetAllTasksQuery)
 	if err != nil {
@@ -63,7 +64,7 @@ func (r *Task) GetAll(ctx context.Context) ([]models.Task, error) {
 	return tasks, nil
 }
 
-func (r *Task) Update(ctx context.Context, task *models.Task) (*models.Task, error) {
+func (r *TaskRepo) Update(ctx context.Context, task *models.Task) (*models.Task, error) {
 	rows, err := r.db.NamedQueryContext(ctx, UpdateTaskQuery, task)
 	if err != nil {
 		log.Printf("Error executing UpdateTaskQuery: %v", err)
@@ -73,20 +74,22 @@ func (r *Task) Update(ctx context.Context, task *models.Task) (*models.Task, err
 
 	if rows.Next() {
 		var updatedTask models.Task
-		err := rows.StructScan(&updatedTask)
-		if err != nil {
+		if err := rows.StructScan(&updatedTask); err != nil {
 			log.Printf("Error scanning updated task: %v", err)
 			return nil, err
 		}
 		return &updatedTask, nil
 	}
+
+	log.Printf("Task update failed, no rows returned")
 	return nil, nil
 }
 
-func (r *Task) Delete(ctx context.Context, id int) error {
+func (r *TaskRepo) Delete(ctx context.Context, id int) error {
 	_, err := r.db.ExecContext(ctx, DeleteTaskQuery, id)
 	if err != nil {
-		log.Printf("Error executing DeleteTaskQuery: %v", err)
+		log.Printf("Error executing DeleteTaskQuery for id %d: %v", id, err)
+		return err
 	}
-	return err
+	return nil
 }

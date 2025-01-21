@@ -28,11 +28,3 @@ func DB(config *config.Config) (*sqlx.DB, error) {
 	log.Println("Подключение к базе данных успешно установлено!")
 	return db, nil
 }
-
-/* Герация идшника
-   func generateID() string {
-
-     id := uuid.New()
-     return id.String()
-   }
-*/
