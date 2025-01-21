@@ -1,0 +1,43 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Клонирование репозитория
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Логин в Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 3. Сборка Docker-образа
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/your-app:latest .
+
+      # 4. Публикация Docker-образа
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/your-app:latest
+
+      # 5. Деплой на сервер
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASS }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/your-app:latest
+            docker stop app || true
+            docker rm app || true
+            docker run -d --name app -p 8080:8080 --env-file .env ${{ secrets.DOCKER_USERNAME }}/your-app:latest
